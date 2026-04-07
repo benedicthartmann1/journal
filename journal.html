@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tagesjournal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #faf6ef;
+    --ink: #1a1510;
+    --amber: #c8864a;
+    --amber-light: #e8b97a;
+    --warm-gray: #8a7f74;
+    --paper: #f2ece0;
+    --line: #e0d8cc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  header {
+    padding: 40px 32px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 5vw, 30px);
+    font-weight: 400;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .logo span { color: var(--amber); font-style: italic; }
+
+  .date-display {
+    font-size: 13px;
+    color: var(--warm-gray);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Tab bar */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+    padding: 0 32px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+
+  .tab {
+    padding: 16px 0;
+    margin-right: 32px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--warm-gray);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    position: relative;
+    top: 1px;
+  }
+
+  .tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--amber);
+  }
+
+  .tab:hover:not(.active) { color: var(--ink); }
+
+  /* Main layout */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+    animation: fadeUp 0.6s 0.15s ease both;
+  }
+
+  /* Section cards */
+  .section {
+    margin-bottom: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .section-badge {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+    background: rgba(200, 134, 74, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--ink);
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--line);
+    margin: 36px 0;
+  }
+
+  /* Textarea wrapper */
+  .field-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 600px) {
+    .field-group { grid-template-columns: 1fr; }
+    header, .tabs, main { padding-left: 20px; padding-right: 20px; }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+  }
+
+  .field textarea {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    resize: vertical;
+    min-height: 120px;
+    line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  .field textarea:focus {
+    border-color: var(--amber);
+    box-shadow: 0 0 0 3px rgba(200,134,74,0.12);
+  }
+
+  .field textarea::placeholder { color: #bbb5aa; }
+
+  /* Goal items */
+  .goal-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .goal-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    transition: border-color 0.2s;
+  }
+
+  .goal-item:focus-within { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(200,134,74,0.1); }
+
+  .goal-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--amber-light);
+    min-width: 24px;
+    line-height: 1.4;
+    user-select: none;
+  }
+
+  .goal-input {
+    flex: 1;
+    border: none;
+    background: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    outline: none;
+    line-height: 1.6;
+    resize: none;
+    min-height: 28px;
+  }
+
+  .goal-input::placeholder { color: #bbb5aa; }
+
+  .add-goal {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--warm-gray);
+    cursor: pointer;
+    margin-top: 8px;
+    padding: 6px 0;
+    background: none;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: color 0.2s;
+  }
+
+  .add-goal:hover { color: var(--amber); }
+
+  /* Save button */
+  .save-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+
+  .save-status {
+    font-size: 13px;
+    color: var(--warm-gray);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .save-status.show { opacity: 1; }
+
+  .btn-save {
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .btn-save:hover { background: #2e2820; }
+  .btn-save:active { transform: scale(0.98); }
+
+  /* History tab */
+  .history-list { display: flex; flex-direction: column; gap: 20px; }
+
+  .history-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .history-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .history-date {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+  }
+
+  .history-toggle {
+    color: var(--warm-gray);
+    font-size: 18px;
+    transition: transform 0.2s;
+  }
+
+  .history-card.open .history-toggle { transform: rotate(180deg); }
+
+  .history-card-body {
+    display: none;
+    padding: 20px;
+    gap: 20px;
+    flex-direction: column;
+  }
+
+  .history-card.open .history-card-body { display: flex; }
+
+  .history-section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+
+  .history-text {
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    white-space: pre-wrap;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--warm-gray);
+  }
+
+  .empty-state h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Täglich <span>besser</span></div>
+  <div class="date-display" id="dateDisplay"></div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('morgen')">🌅 Morgen</button>
+  <button class="tab" onclick="showTab('abend')">🌙 Abend</button>
+  <button class="tab" onclick="showTab('verlauf')">📖 Verlauf</button>
+</div>
+
+<main>
+  <!-- MORGEN TAB -->
+  <div id="tab-morgen">
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-badge">Morgens</span>
+        <h2 class="section-title">Wofür bin ich dankbar?</h2>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <label>Dankbarkeit 1</label>
+          <textarea id="m-dank-1" placeholder="Ich bin dankbar für …"></textarea>
+        </div>
+        <div class="field">
+          <label>Dankbarkeit 2</label>
+          <textarea id="m-dank-2" placeholder="Ich bin dankbar für …"></textarea>
+        </div>
+        <div class="field">
+          <label>Dankbarkeit 3</label>
+          <textarea id="m-dank-3" placeholder="Ich bin dankbar für …"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-badge">Morgens</span>
+        <h2 class="section-title">Meine Ziele</h2>
+      </div>
+      <div class="goal-list" id="goal-list"></div>
+      <button class="add-goal" onclick="addGoal()">＋ Ziel hinzufügen</button>
+    </div>
+
+    <div class="save-bar">
+      <span class="save-status" id="save-status-morgen">✓ Gespeichert</span>
+      <button class="btn-save" onclick="saveMorgen()">Eintrag speichern</button>
+    </div>
+  </div>
+
+  <!-- ABEND TAB -->
+  <div id="tab-abend" style="display:none">
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-badge">Abends</span>
+        <h2 class="section-title">Wofür bin ich dankbar?</h2>
+      </div>
+      <div class="field-group">
+        <div class="field">
+          <label>Dankbarkeit 1</label>
+          <textarea id="a-dank-1" placeholder="Heute bin ich dankbar für …"></textarea>
+        </div>
+        <div class="field">
+          <label>Dankbarkeit 2</label>
+          <textarea id="a-dank-2" placeholder="Heute bin ich dankbar für …"></textarea>
+        </div>
+        <div class="field">
+          <label>Dankbarkeit 3</label>
+          <textarea id="a-dank-3" placeholder="Heute bin ich dankbar für …"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-badge">Abends</span>
+        <h2 class="section-title">Heutige Fortschritte</h2>
+      </div>
+      <div id="progress-list" class="goal-list"></div>
+    </div>
+
+    <div class="save-bar">
+      <span class="save-status" id="save-status-abend">✓ Gespeichert</span>
+      <button class="btn-save" onclick="saveAbend()">Eintrag speichern</button>
+    </div>
+  </div>
+
+  <!-- VERLAUF TAB -->
+  <div id="tab-verlauf" style="display:none">
+    <div id="history-list" class="history-list"></div>
+  </div>
+</main>
+
+<script>
+  const DB_KEY = 'tagesjournal_v1';
+
+  function getDB() {
+    try { return JSON.parse(localStorage.getItem(DB_KEY)) || {}; } catch { return {}; }
+  }
+
+  function saveDB(db) {
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  }
+
+  function todayKey() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function formatDate(key) {
+    const d = new Date(key + 'T12:00:00');
+    return d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  // Date in header
+  document.getElementById('dateDisplay').textContent =
+    new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  // ---- TABS ----
+  function showTab(name) {
+    ['morgen','abend','verlauf'].forEach(t => {
+      document.getElementById('tab-'+t).style.display = t === name ? '' : 'none';
+    });
+    document.querySelectorAll('.tab').forEach((el, i) => {
+      el.classList.toggle('active', ['morgen','abend','verlauf'][i] === name);
+    });
+    if (name === 'verlauf') renderHistory();
+    if (name === 'abend') renderProgress();
+  }
+
+  // ---- GOALS ----
+  let goals = [];
+
+  function loadGoals() {
+    const db = getDB();
+    const today = db[todayKey()] || {};
+    goals = today.goals || [''];
+    renderGoals();
+  }
+
+  function renderGoals() {
+    const list = document.getElementById('goal-list');
+    list.innerHTML = '';
+    goals.forEach((g, i) => {
+      const div = document.createElement('div');
+      div.className = 'goal-item';
+      div.innerHTML = `<span class="goal-num">${i+1}</span>
+        <textarea class="goal-input" rows="1" placeholder="Ziel eingeben …" oninput="goals[${i}]=this.value;autoResize(this)">${g}</textarea>`;
+      list.appendChild(div);
+      const ta = div.querySelector('textarea');
+      autoResize(ta);
+    });
+  }
+
+  function addGoal() {
+    goals.push('');
+    renderGoals();
+    const items = document.querySelectorAll('.goal-input');
+    items[items.length - 1].focus();
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  // ---- PROGRESS (Abend) ----
+  function renderProgress() {
+    const db = getDB();
+    const today = db[todayKey()] || {};
+    const todayGoals = today.goals || [];
+    const progress = today.progress || {};
+    const list = document.getElementById('progress-list');
+
+    if (todayGoals.length === 0 || todayGoals.every(g => !g.trim())) {
+      list.innerHTML = `<p style="color:var(--warm-gray);font-size:14px;padding:8px 0">Trage morgens erst deine Ziele ein.</p>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    todayGoals.forEach((g, i) => {
+      if (!g.trim()) return;
+      const div = document.createElement('div');
+      div.className = 'goal-item';
+      div.style.flexDirection = 'column';
+      div.style.gap = '8px';
+      div.innerHTML = `
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="goal-num">${i+1}</span>
+          <span style="font-size:14px;font-weight:500">${escHtml(g)}</span>
+        </div>
+        <textarea class="goal-input" rows="2" placeholder="Was habe ich heute dazu beigetragen? …" style="padding-left:34px" oninput="autoResize(this)">${escHtml(progress[i] || '')}</textarea>
+      `;
+      list.appendChild(div);
+      autoResize(div.querySelector('textarea'));
+    });
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ---- SAVE ----
+  function saveMorgen() {
+    const db = getDB();
+    const key = todayKey();
+    if (!db[key]) db[key] = {};
+    db[key].morgenDank = [
+      document.getElementById('m-dank-1').value,
+      document.getElementById('m-dank-2').value,
+      document.getElementById('m-dank-3').value,
+    ];
+    db[key].goals = [...goals];
+    saveDB(db);
+    flashSaved('morgen');
+  }
+
+  function saveAbend() {
+    const db = getDB();
+    const key = todayKey();
+    if (!db[key]) db[key] = {};
+    db[key].abendDank = [
+      document.getElementById('a-dank-1').value,
+      document.getElementById('a-dank-2').value,
+      document.getElementById('a-dank-3').value,
+    ];
+    // collect progress
+    const progress = {};
+    document.querySelectorAll('#progress-list .goal-input').forEach((ta, i) => {
+      progress[i] = ta.value;
+    });
+    db[key].progress = progress;
+    saveDB(db);
+    flashSaved('abend');
+  }
+
+  function flashSaved(which) {
+    const el = document.getElementById('save-status-' + which);
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // ---- LOAD TODAY ----
+  function loadToday() {
+    const db = getDB();
+    const today = db[todayKey()] || {};
+    const md = today.morgenDank || ['','',''];
+    document.getElementById('m-dank-1').value = md[0] || '';
+    document.getElementById('m-dank-2').value = md[1] || '';
+    document.getElementById('m-dank-3').value = md[2] || '';
+    const ad = today.abendDank || ['','',''];
+    document.getElementById('a-dank-1').value = ad[0] || '';
+    document.getElementById('a-dank-2').value = ad[1] || '';
+    document.getElementById('a-dank-3').value = ad[2] || '';
+  }
+
+  // ---- HISTORY ----
+  function renderHistory() {
+    const db = getDB();
+    const keys = Object.keys(db).sort((a,b) => b.localeCompare(a));
+    const list = document.getElementById('history-list');
+
+    if (keys.length === 0) {
+      list.innerHTML = `<div class="empty-state">
+        <h3>Noch keine Einträge</h3>
+        <p>Starte mit deinem ersten Morgeneintrag.</p>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = keys.map((key, idx) => {
+      const d = db[key];
+      const goals = (d.goals || []).filter(g => g.trim());
+      const progress = d.progress || {};
+      const isToday = key === todayKey();
+
+      const goalsHtml = goals.length ? goals.map((g, i) => `
+        <div style="margin-bottom:12px">
+          <div style="font-size:14px;font-weight:500;margin-bottom:4px">${escHtml(g)}</div>
+          ${progress[i] ? `<div style="font-size:14px;color:var(--warm-gray);padding-left:14px;border-left:2px solid var(--amber-light)">→ ${escHtml(progress[i])}</div>` : ''}
+        </div>`).join('') : '<p style="color:var(--warm-gray);font-size:14px">Keine Ziele eingetragen</p>';
+
+      const mdank = (d.morgenDank || []).filter(x => x.trim());
+      const adank = (d.abendDank || []).filter(x => x.trim());
+
+      return `<div class="history-card ${idx===0?'open':''}" id="hcard-${idx}">
+        <div class="history-card-header" onclick="toggleCard(${idx})">
+          <span class="history-date">${formatDate(key)}${isToday ? ' <span style="font-size:12px;color:var(--amber)">(Heute)</span>' : ''}</span>
+          <span class="history-toggle">▾</span>
+        </div>
+        <div class="history-card-body">
+          ${mdank.length ? `<div>
+            <div class="history-section-label">🌅 Morgens dankbar für</div>
+            ${mdank.map(t => `<div class="history-text">• ${escHtml(t)}</div>`).join('')}
+          </div>` : ''}
+          ${adank.length ? `<div>
+            <div class="history-section-label">🌙 Abends dankbar für</div>
+            ${adank.map(t => `<div class="history-text">• ${escHtml(t)}</div>`).join('')}
+          </div>` : ''}
+          ${goals.length ? `<div>
+            <div class="history-section-label">🎯 Ziele & Fortschritte</div>
+            ${goalsHtml}
+          </div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleCard(idx) {
+    const card = document.getElementById('hcard-'+idx);
+    card.classList.toggle('open');
+  }
+
+  // Init
+  loadToday();
+  loadGoals();
+</script>
+</body>
+</html>
